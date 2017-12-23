@@ -16,8 +16,8 @@ class AltMashInStep(StepBase):
 
     #-------------------------------------------------------------------------------
     def init(self):
-        self.kettle = zint(self.a_kettle_prop)
-        self.target = zoat(self.b_target_prop)
+        self.kettle = int(self.a_kettle_prop)
+        self.target = float(self.b_target_prop)
         self.agitator_run = self.c_agitator_prop == "Yes"
         self.done = False
 
@@ -39,7 +39,7 @@ class AltMashInStep(StepBase):
             self.done = True
             if self.agitator:
                 self.actor_off(self.agitator)
-            self.notify("{} complete".format(self.name), "Press the next button when ready to continue", type='warning', timeout=None)
+            self.notify("{} complete".format(self.name), "Press next button to continue", type='warning', timeout=None)
 
 ################################################################################
 @cbpi.step
@@ -52,9 +52,9 @@ class AltMashStep(StepBase):
     e_agitator_stop_prop = Property.Select("Turn agitator off at end?", options=["Yes","No"])
     #-------------------------------------------------------------------------------
     def init(self):
-        self.kettle = zint(self.a_kettle_prop)
-        self.target = zoat(self.b_target_prop)
-        self.timer = zoat(self.c_timer_prop)
+        self.kettle = int(self.a_kettle_prop)
+        self.target = float(self.b_target_prop)
+        self.timer = float(self.c_timer_prop)
         self.agitator_start = self.d_agitator_start_prop == "Yes"
         self.agitator_stop = self.e_agitator_stop_prop == "Yes"
 
@@ -128,11 +128,11 @@ class AltBoilStep(StepBase):
     #-------------------------------------------------------------------------------
     def init(self):
 
-        self.target = zoat(self.target_prop)
-        self.kettle = zint(self.kettle_prop)
-        self.timer = zoat(self.timer_prop) * 60.0
-        self.warn_add = zoat(self.warning_addition_prop)
-        self.warn_boil = zoat(self.warning_boil_prop)
+        self.target = float(self.target_prop)
+        self.kettle = int(self.kettle_prop)
+        self.timer = float(self.timer_prop) * 60.0
+        self.warn_add = float(self.warning_addition_prop)
+        self.warn_boil = float(self.warning_boil_prop)
 
         self.done_boil_warn = False
         self.done_boil_alert = False
@@ -194,7 +194,7 @@ class AltBoilStep(StepBase):
                 self.additions[i]['warn'] = True
                 self.notify("Warning: {} min Additions".format(self.additions[i]['mins']),
                             "Add {} in {} seconds".format(self.additions[i]['text'],self.warn_add),
-                            type='success', timeout=(self.warn_add - 1)*1000)
+                            type='info', timeout=(self.warn_add - 1)*1000)
             if not self.additions[i]['done'] and now > addition_time:
                 self.additions[i]['done'] = True
                 self.notify("Alert: {} min Additions".format(self.additions[i]['mins']),
@@ -205,7 +205,7 @@ class AltBoilStep(StepBase):
     def check_boil_warnings(self):
         if (not self.done_boil_warn) and (self.get_kettle_temp(self.kettle) >= self.target - self.warn_boil):
             self.notify("Warning: Boil Approaching", "Current Temp {:.1f}".format(self.get_kettle_temp(self.kettle)),
-                        type="success", timeout=self.warn_add*1000)
+                        type="info", timeout=self.warn_add*1000)
             self.done_boil_warn = True
         if (not self.done_boil_alert) and (self.get_kettle_temp(self.kettle) >= self.target):
             self.notify("Alert: Boil Imminent", "Current Temp {:.1f}".format(self.get_kettle_temp(self.kettle)),
@@ -216,15 +216,5 @@ class AltBoilStep(StepBase):
 # Utilities
 ################################################################################
 def zint(value):
-    '''
-    return an integer, regardless of input type
-    '''
-    try: return int(value)
+    try: return int(float(value))
     except: return 0
-
-def zoat(value):
-    '''
-    return an float, regardless of input type
-    '''
-    try: return float(value)
-    except: return 0.0
