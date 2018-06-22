@@ -13,12 +13,14 @@ class AltMashInStep(StepBase):
     a_kettle_prop = StepProperty.Kettle("Kettle", description="Kettle in which the mashing takes place")
     b_target_prop = Property.Number("Temperature", configurable=True, description="Target Temperature of Mash Step")
     c_agitator_prop = Property.Select("Run agitator while heating?", options=["Yes","No"])
+    d_kill_heat_prop = Property.Select("Turn off heater when target reached?", options=["Yes","No"])
 
     #-------------------------------------------------------------------------------
     def init(self):
         self.kettle = int(self.a_kettle_prop)
         self.target = float(self.b_target_prop)
         self.agitator_run = self.c_agitator_prop == "Yes"
+        self.kill_heat = self.d_kill_heat_prop == "Yes"
         self.done = False
 
         self.agitator = zint(cbpi.cache.get("kettle")[self.kettle].agitator)
@@ -37,6 +39,8 @@ class AltMashInStep(StepBase):
         # Check if Target Temp is reached
         if (self.get_kettle_temp(self.kettle) >= self.target) and (self.done is False):
             self.done = True
+            if self.kill_heat:
+                self.set_target_temp(0, self.kettle)
             if self.agitator:
                 self.actor_off(self.agitator)
             self.notify("{} complete".format(self.name), "Press next button to continue", type='warning', timeout=None)
@@ -177,12 +181,11 @@ class AltBoilStep(StepBase):
             self.check_boil_warnings()
             if self.get_kettle_temp(self.kettle) >= self.target:
                 self.start_timer(self.timer)
-        else:
-            self.check_addition_timers()
-
-        if self.is_timer_finished() is True:
+        elif self.is_timer_finished() is True:
             self.notify("{} complete".format(self.name), "Starting the next step", type='success', timeout=None)
             self.next()
+        else:
+            self.check_addition_timers()
 
     #-------------------------------------------------------------------------------
     def check_addition_timers(self):
