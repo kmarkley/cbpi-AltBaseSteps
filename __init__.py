@@ -51,16 +51,18 @@ class AltMashStep(StepBase):
     # Properties
     a_kettle_prop = StepProperty.Kettle("Kettle", description="Kettle in which the mashing takes place")
     b_target_prop = Property.Number("Temperature", configurable=True, description="Target Temperature of Mash Step")
-    c_timer_prop = Property.Number("Timer in minutes", configurable=True, description="Timer is started when the target temperature is reached")
-    d_agitator_start_prop = Property.Select("Turn agitator on at start?", options=["Yes","No"])
-    e_agitator_stop_prop = Property.Select("Turn agitator off at end?", options=["Yes","No"])
+    c_timer_prop = Property.Number("Timer in minutes", configurable=True, description="Amount of time to maintain taget temperature in this step")
+    d_offset_prop = Property.Number("Target timer offset", configurable=True, default_value=0, description="Start timer when temperature is this close to target. Useful for PID heaters that approach target slowly.")
+    e_agitator_start_prop = Property.Select("Turn agitator on at start?", options=["Yes","No"])
+    f_agitator_stop_prop = Property.Select("Turn agitator off at end?", options=["Yes","No"])
     #-------------------------------------------------------------------------------
     def init(self):
         self.kettle = int(self.a_kettle_prop)
         self.target = float(self.b_target_prop)
         self.timer = float(self.c_timer_prop)
-        self.agitator_start = self.d_agitator_start_prop == "Yes"
-        self.agitator_stop = self.e_agitator_stop_prop == "Yes"
+        self.offset = float(self.d_offset_prop)
+        self.agitator_start = self.e_agitator_start_prop == "Yes"
+        self.agitator_stop = self.f_agitator_stop_prop == "Yes"
 
         self.agitator = zint(cbpi.cache.get("kettle")[self.kettle].agitator)
 
@@ -89,7 +91,7 @@ class AltMashStep(StepBase):
     #-------------------------------------------------------------------------------
     def execute(self):
         # Check if Target Temp is reached
-        if self.get_kettle_temp(self.kettle) >= self.target:
+        if self.get_kettle_temp(self.kettle) >= self.target - self.offset:
             # Check if Timer is Running
             if self.is_timer_finished() is None:
                 self.start_timer(self.timer * 60)
@@ -146,7 +148,7 @@ class AltBoilStep(StepBase):
         for i in range(1,9):
             additionTime = self.__getattribute__("add_{}_time".format(i))
             additionText = self.__getattribute__("add_{}_text".format(i))
-            if additionTime is not None:
+            try:
                 if additionText is None:
                     additionText = "Addition {}".format(i)
                 self.additions[i] = {
@@ -156,6 +158,9 @@ class AltBoilStep(StepBase):
                     'done': False,
                     'warn': False,
                 }
+            except:
+                # empty or invalid addition
+                pass
         # set target temp
         self.set_target_temp(self.target, self.kettle)
 
